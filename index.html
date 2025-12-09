@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AlexNet on Fashion-MNIST</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Optional Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #050816;
+      --bg-alt: #070b1e;
+      --card: rgba(14, 22, 46, 0.9);
+      --card-soft: rgba(16, 26, 56, 0.75);
+      --accent: #4f8cff;
+      --accent-soft: rgba(79, 140, 255, 0.16);
+      --accent-strong: #7c5cff;
+      --text-main: #f9fbff;
+      --text-soft: #b5bfdc;
+      --border-subtle: rgba(255, 255, 255, 0.06);
+      --shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.45);
+      --radius-lg: 20px;
+      --radius-md: 12px;
+      --radius-full: 999px;
+      --blur-strong: 22px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, #2b4eff33, transparent 55%),
+        radial-gradient(circle at bottom right, #9c27b033, transparent 55%),
+        linear-gradient(145deg, #020617 0%, #020617 30%, #030712 100%);
+      color: var(--text-main);
+      line-height: 1.7;
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+
+    /* Scrollbar tweak (desktop) */
+    ::-webkit-scrollbar {
+      width: 10px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #020617;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #182235;
+      border-radius: 999px;
+    }
+
+    header {
+      max-width: 1100px;
+      margin: 26px auto 10px;
+      padding: 0 18px;
+    }
+
+    .hero {
+      position: relative;
+      padding: 22px 22px 26px;
+      border-radius: 26px;
+      background: radial-gradient(circle at top left, #4f8cff33, transparent 60%),
+                  radial-gradient(circle at bottom right, #9c27b033, transparent 55%),
+                  linear-gradient(135deg, #020617dd, #03071fd9);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 20px 45px rgba(3, 10, 30, 0.85);
+      overflow: hidden;
+    }
+
+    .hero-glow {
+      position: absolute;
+      inset: -40px;
+      background:
+        radial-gradient(circle at 0% 0%, #4f8cff1a, transparent 55%),
+        radial-gradient(circle at 100% 100%, #e040fb26, transparent 55%);
+      mix-blend-mode: screen;
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .hero-content {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 2.3fr) minmax(0, 1.7fr);
+      gap: 20px;
+      align-items: center;
+    }
+
+    @media (max-width: 800px) {
+      .hero-content {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .hero-left h1 {
+      font-size: clamp(1.9rem, 3vw, 2.4rem);
+      font-weight: 650;
+      letter-spacing: 0.02em;
+      margin-bottom: 6px;
+    }
+
+    .hero-left h1 span {
+      background: linear-gradient(120deg, #4f8cff, #c084fc);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .hero-sub {
+      color: var(--text-soft);
+      font-size: 0.95rem;
+      max-width: 540px;
+      margin-bottom: 14px;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .tag {
+      font-size: 0.78rem;
+      padding: 6px 11px;
+      border-radius: var(--radius-full);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: linear-gradient(135deg, #0b1120cc, #020617dd);
+      color: var(--text-soft);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tag-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #4f8cff;
+      box-shadow: 0 0 0 4px #4f8cff40;
+    }
+
+    .hero-metrics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 0.78rem;
+      color: var(--text-soft);
+    }
+
+    .metric {
+      padding: 7px 10px;
+      border-radius: var(--radius-md);
+      background: radial-gradient(circle at top left, #4f8cff17, transparent 70%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      min-width: 120px;
+    }
+
+    .metric-label {
+      text-transform: uppercase;
+      font-size: 0.68rem;
+      letter-spacing: 0.08em;
+      opacity: 0.7;
+    }
+
+    .metric-value {
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .hero-right {
+      position: relative;
+      justify-self: flex-end;
+    }
+
+    .hero-pill {
+      position: relative;
+      padding: 16px 18px;
+      background: rgba(9, 15, 37, 0.9);
+      border-radius: 20px;
+      border: 1px solid rgba(135, 206, 250, 0.18);
+      box-shadow: 0 16px 42px rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(var(--blur-strong));
+      max-width: 300px;
+      margin-left: auto;
+    }
+
+    .hero-pill-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hero-pill-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #4f8cff, #a855f7);
+      box-shadow: 0 0 10px #4f8cffaa;
+    }
+
+    .hero-pill-body {
+      font-size: 0.78rem;
+      color: var(--text-soft);
+      margin-bottom: 10px;
+    }
+
+    .hero-mini-list {
+      list-style: none;
+      font-size: 0.75rem;
+      color: var(--text-soft);
+      padding-left: 0;
+    }
+
+    .hero-mini-list li::before {
+      content: "•";
+      color: #4f8cff;
+      margin-right: 6px;
+    }
+
+    main {
+      max-width: 1100px;
+      margin: 30px auto 40px;
+      padding: 0 18px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.6fr);
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    section {
+      background: radial-gradient(circle at top left, #4f8cff14, transparent 70%);
+      border-radius: var(--radius-lg);
+      padding: 18px 18px 20px;
+      margin-bottom: 18px;
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-soft);
+      backdrop-filter: blur(16px);
+    }
+
+    h2 {
+      margin-top: 0;
+      color: #e5edff;
+      font-size: 1.18rem;
+      margin-bottom: 8px;
+    }
+
+    p {
+      font-size: 0.9rem;
+      color: var(--text-soft);
+    }
+
+    ul {
+      padding-left: 18px;
+      margin: 6px 0 4px;
+      color: var(--text-soft);
+      font-size: 0.9rem;
+    }
+
+    li + li {
+      margin-top: 3px;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 7px;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      padding: 6px 11px;
+      border-radius: var(--radius-full);
+      background: rgba(10, 22, 55, 0.9);
+      border: 1px solid rgba(103, 163, 255, 0.55);
+      color: #d5e3ff;
+    }
+
+    .visual-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 900px) {
+      .visual-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .img-card {
+      background: var(--card-soft);
+      border-radius: 16px;
+      padding: 10px 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
+      font-size: 0.82rem;
+      color: var(--text-soft);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .img-card strong {
+      color: #e5edff;
+      font-size: 0.86rem;
+    }
+
+    .img-card img {
+      max-width: 100%;
+      border-radius: 12px;
+      display: block;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .tagline {
+      font-size: 0.85rem;
+      margin-top: 4px;
+    }
+
+    .results-list li {
+      margin-top: 4px;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--text-soft);
+      margin: 16px 0 24px;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-content">
+      <div class="hero-left">
+        <h1><span>AlexNet × Fashion-MNIST</span></h1>
+        <p class="hero-sub">
+          Convolutional neural networks for classifying simple clothing images into 10 categories.
+          I use a classic AlexNet architecture, compare it with ResNet18, and run small experiments
+          to see how batch size, learning rate, and augmentation change the results.
+        </p>
+
+        <div class="tag-row">
+          <div class="tag">
+            <span class="tag-dot"></span>
+            Deep Learning • CNNs
+          </div>
+          <div class="tag">
+            Fashion-MNIST dataset
+          </div>
+          <div class="tag">
+            PyTorch + Weights &amp; Biases
+          </div>
+        </div>
+
+        <div class="hero-metrics">
+          <div class="metric">
+            <div class="metric-label">Dataset</div>
+            <div class="metric-value">60k train • 10k test</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Classes</div>
+            <div class="metric-value">10 clothing types</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Models</div>
+            <div class="metric-value">AlexNet &amp; ResNet18</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-right">
+        <div class="hero-pill">
+          <div class="hero-pill-title">
+            <span class="hero-pill-dot"></span>
+            Experiments overview
+          </div>
+          <p class="hero-pill-body">
+            I trained AlexNet with different hyperparameters and compared it against ResNet18:
+          </p>
+          <ul class="hero-mini-list">
+            <li>Batch size: 16, 32, 64</li>
+            <li>Learning rate: 0.001 vs 0.0001</li>
+            <li>With &amp; without augmentation</li>
+            <li>AlexNet vs ResNet18 baseline</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="grid">
+    <!-- Problem & Motivation -->
+    <section>
+      <h2>Problem &amp; Motivation</h2>
+      <p>
+        The main goal of this project is to train a convolutional neural network that can classify
+        small clothing images into 10 classes such as T-shirt/top, trouser, dress, coat, and sneaker.
+        I use the Fashion-MNIST dataset, which contains 28×28 grayscale images that are a bit more
+        realistic than the original digit-based MNIST dataset.
+      </p>
+      <p>
+        Instead of designing everything from scratch, I adapt AlexNet (a classic CNN
+        originally built for ImageNet) and test how it behaves under different training
+        settings. I also compare it with a more modern architecture, ResNet18.
+      </p>
+    </section>
+
+    <!-- Technical Summary -->
+    <section>
+      <h2>Technical Overview</h2>
+      <p>
+        I load Fashion-MNIST using <code>torchvision.datasets.FashionMNIST</code> and apply
+        preprocessing so the images match AlexNet and ResNet18 input requirements:
+      </p>
+      <ul>
+        <li>Resize each image to 224×224 pixels</li>
+        <li>Convert grayscale images to 3 channels</li>
+        <li>Normalize with ImageNet mean and standard deviation</li>
+        <li>Optionally apply random horizontal flips and small rotations</li>
+      </ul>
+      <p>
+        For training, I use Cross-Entropy loss with the Adam optimizer and log all runs to
+        Weights &amp; Biases (wandb). Each experiment runs for a small number of epochs so I can
+        quickly compare different settings instead of aiming for a perfect final accuracy.
+      </p>
+      <div class="pill-row">
+        <div class="pill">CrossEntropyLoss</div>
+        <div class="pill">Adam optimizer</div>
+        <div class="pill">TorchVision + PyTorch</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Visualizations -->
+  <section>
+    <h2>Visualizations</h2>
+    <p class="tagline">
+      These plots come from my runs logged in Weights &amp; Biases and show how AlexNet and
+      ResNet18 behaved under different hyperparameters.
+    </p>
+
+    <div class="visual-grid">
+      <div class="img-card">
+        <img src="images/accuracy_plot.png" alt="Training accuracy plot">
+        <strong>Train Accuracy (multiple runs)</strong>
+        <p>
+          Training accuracy curves for AlexNet with different batch sizes and learning rates,
+          plus a ResNet18 baseline. Most runs steadily improve over the few epochs I trained.
+        </p>
+      </div>
+
+      <div class="img-card">
+        <img src="images/loss_plot.png" alt="Validation loss plot">
+        <strong>Validation Loss</strong>
+        <p>
+          Validation loss across several runs. Batch size 32 and learning rate 0.001 give
+          smooth and stable curves; very small learning rates converge more slowly.
+        </p>
+      </div>
+
+      <div class="img-card">
+        <img src="images/confusion_matrix.png" alt="AlexNet confusion matrix">
+        <strong>AlexNet Confusion Matrix</strong>
+        <p>
+          Confusion matrix for the AlexNet model. Most predictions fall along the diagonal,
+          with some confusion between visually similar items like shirts, T-shirts, and coats.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Results & Takeaways -->
+  <section>
+    <h2>Results &amp; Takeaways</h2>
+    <ul class="results-list">
+      <li>
+        <strong>Batch size:</strong> 16, 32, and 64 all worked, but 32 was a good balance between
+        stability and speed. Smaller batches had noisier curves; larger batches were smoother but
+        did not always give higher accuracy in a few epochs.
+      </li>
+      <li>
+        <strong>Learning rate:</strong> A learning rate of 0.001 reached good validation accuracy
+        faster than 0.0001. The smaller learning rate trained more slowly and sometimes ended with
+        slightly worse accuracy in the same number of epochs.
+      </li>
+      <li>
+        <strong>Augmentation:</strong> Simple data augmentation (flips and small rotations) helped
+        reduce overfitting a bit and slightly improved validation performance compared to training
+        without augmentation.
+      </li>
+      <li>
+        <strong>Architecture comparison:</strong> ResNet18 performed similarly or slightly better
+        than AlexNet, which matches the idea that residual connections help deeper models optimize
+        more easily.
+      </li>
+    </ul>
+    <p>
+      Overall, this project let me practice setting up a full deep-learning pipeline: data
+      preprocessing, model adaptation, experiment tracking, and basic interpretation of results.
+      Even small hyperparameter changes can affect the curves and final accuracy, and more modern
+      architectures like ResNet18 can provide a small boost compared to AlexNet.
+    </p>
+  </section>
+</main>
+
+<footer>
+  AlexNet × Fashion-MNIST • GitHub Pages project
+</footer>
+
+</body>
+</html>
